@@ -14,7 +14,7 @@ class PostBase(BaseModel):
     title: str
     content: str
     published: bool = True
-    owner: UserOut
+    # owner: UserOut
 
 class PostCreate(PostBase):
     pass

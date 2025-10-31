@@ -14,10 +14,20 @@ router = APIRouter(
 
 @router.get("/", response_model=List[schemas.PostOut])
 def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user), limit: int = 10, skip: int = 0, search: Optional[str] = ""):
-    # cursor.execute("""SELECT * FROM posts""")
+    # results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+    #     models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id)
+
+    # cursor.execute("""SELECT * FROM posts """)
     # posts = cursor.fetchall()
-    print(current_user)
-    # posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    # posts = db.execute(
+    #     'select posts.*, COUNT(votes.post_id) as votes from posts LEFT JOIN votes ON posts.id=votes.post_id  group by posts.id')
+    # results = []
+    # for post in posts:
+    #     results.append(dict(post))
+    # print(results)
+    # posts = db.query(models.Post).filter(
+    #     models.Post.title.contains(search)).limit(limit).offset(skip).all()
 
     result = (db.query(models.Post, func.count(models.Vote.post_id).label("votes")).
               join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).
@@ -28,7 +38,7 @@ def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_c
 
 @router.post("/", status_code=201, response_model=schemas.Post)
 def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    # cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *""",
+    # cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * """,
     #                (post.title, post.content, post.published))
     # new_post = cursor.fetchone()
     # conn.commit()
@@ -41,12 +51,8 @@ def create_posts(post: schemas.PostCreate, db: Session = Depends(get_db), curren
 
 @router.get("/{id}", response_model=schemas.PostOut)
 def get_post(id: int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    # cursor.execute("""SELECT * FROM posts WHERE id = %s""", (str(id),))
+    # cursor.execute("""SELECT * from posts WHERE id = %s """, (str(id),))
     # post = cursor.fetchone()
-    # if not post:
-    #     raise HTTPException(status_code=404,
-    #                         detail=f"post with id: {id} was not found")
-
     # post = db.query(models.Post).filter(models.Post.id == id).first()
     post = (db.query(models.Post, func.count(models.Vote.post_id).label("votes")).
               join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True).
@@ -59,13 +65,10 @@ def get_post(id: int, db: Session = Depends(get_db), current_user = Depends(oaut
 
 @router.delete("/{id}", status_code=204)
 def delete_post(id: int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    # cursor.execute("""DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
+    # cursor.execute(
+    #     """DELETE FROM posts WHERE id = %s returning *""", (str(id),))
     # deleted_post = cursor.fetchone()
     # conn.commit()
-    #
-    # if deleted_post is None:
-    #     raise HTTPException(status_code=404,
-    #                         detail=f"post with id: {id} was not found")
     post_query = db.query(models.Post).filter(models.Post.id == id)
     post = post_query.first()
 
@@ -81,16 +84,11 @@ def delete_post(id: int, db: Session = Depends(get_db), current_user = Depends(o
     return Response(status_code=204)
 
 @router.put("/{id}", response_model=schemas.Post)
-def update_post(id: int, updated_post: schemas.PostBase, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
+def update_post(id: int, updated_post: schemas.PostCreate, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
     # cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
     #                (post.title, post.content, post.published, str(id)))
     # updated_post = cursor.fetchone()
-    # print(updated_post)
     # conn.commit()
-    #
-    # if updated_post is None:
-    #     raise HTTPException(status_code=404,
-    #                         detail=f"post with id: {id} was not found")
     post_query = db.query(models.Post).filter(models.Post.id == id)
     post = post_query.first()
 
@@ -103,4 +101,4 @@ def update_post(id: int, updated_post: schemas.PostBase, db: Session = Depends(g
     post_query.update(updated_post.model_dump(), synchronize_session=False)
     db.commit()
 
-    return updated_post.first()
+    return post_query.first()
