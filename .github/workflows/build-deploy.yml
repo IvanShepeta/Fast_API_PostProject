@@ -43,14 +43,14 @@ jobs:
         run: python - m pip install --upgrade pip
       - name: install all dependencies
         run: pip install -r requirements.txt
-      - name: Wait for Postgres DB
-        run: |
-          until psql -h localhost -U ${{ secrets.DATABASE_USERNAME }} -lqt | cut -d \| -f 1 | grep -w ${{ secrets.DATABASE_NAME }}_test; do 
-          echo "Waiting for database..."
-          sleep 2
-          done
-      - name: Run Alembic migrations
-        run: alembic upgrade head
+#      - name: Wait for Postgres DB
+#        run: |
+#          until psql -h localhost -U ${{ secrets.DATABASE_USERNAME }} -lqt | cut -d \| -f 1 | grep -w ${{ secrets.DATABASE_NAME }}_test; do
+#          echo "Waiting for database..."
+#          sleep 2
+#          done
+#      - name: Run Alembic migrations
+#        run: alembic upgrade head
       - name: test with pytest
         run: |
           pip install pytest
