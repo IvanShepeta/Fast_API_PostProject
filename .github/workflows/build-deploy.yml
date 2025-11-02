@@ -3,7 +3,7 @@ name: Build and Deploy Code
 on: [push, pull_request]
 
 jobs:
-  job1:
+  build:
     environment:
       name: testing
     env:
@@ -43,15 +43,50 @@ jobs:
         run: python - m pip install --upgrade pip
       - name: install all dependencies
         run: pip install -r requirements.txt
-#      - name: Wait for Postgres DB
-#        run: |
-#          until psql -h localhost -U ${{ secrets.DATABASE_USERNAME }} -lqt | cut -d \| -f 1 | grep -w ${{ secrets.DATABASE_NAME }}_test; do
-#          echo "Waiting for database..."
-#          sleep 2
-#          done
-#      - name: Run Alembic migrations
-#        run: alembic upgrade head
       - name: test with pytest
         run: |
           pip install pytest
           pytest 
+
+#      - name: Login to Docker Hub
+#        uses: docker/login-action@v1
+#        with:
+#          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+#          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v1
+#
+#      - name: Build and push
+#        id: docker_build
+#        uses: docker/build-push-action@v2
+#        with:
+#          context: ./
+#          file: ./Dockerfile
+#          builder: ${{ steps.buildx.outputs.name }}
+#          push: true
+#          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/fastapi:latest
+#          cache-from: type=local,src=/tmp/.buildx-cache
+#          cache-to: type=local,dest=/tmp/.buildx-cache
+#      - name: Image digest
+#        run: echo ${{ steps.docker_build.outputs.digest }}
+
+  Deploy-Render:
+    runs-on: ubuntu-latest
+    steps:
+      # Downloads the Render CLI binary and adds it to the PATH.
+      # To prevent breaking changes in CI/CD, we pin to a
+      # specific CLI version (in this case 1.1.0).
+      - name: Install Render CLI
+        run: |
+          curl -L https://github.com/render-oss/cli/releases/download/v1.1.0/cli_1.1.0_linux_amd64.zip -o render.zip
+          unzip render.zip
+          sudo mv cli_v1.1.0 /usr/local/bin/render
+      - name: Trigger deploy with Render CLI
+        env:
+          # The CLI can authenticate via a Render API key without logging in.
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          CI: true
+        run: |
+          render deploys create ${{ secrets.RENDER_SERVICE_ID }} --output json --confirm
